@@ -86,6 +86,9 @@ def check_postgres_tables_exist(config: Dict[str, Any]) -> Tuple[bool, List[str]
                 """)
                 existing_tables = [row[0] for row in cur.fetchall()]
 
+                # If we get byte strings, convert them to regular strings
+                if isinstance(existing_tables[0], bytes):
+                    existing_tables = [byte_val.decode('utf-8') for byte_val in existing_tables]
                 missing_tables = [table for table in expected_tables if table not in existing_tables]
 
                 return len(missing_tables) == 0, missing_tables
@@ -354,6 +357,9 @@ async def process_table(
                 WHERE table_name = %s
             """, (table_name,))
             pg_column_types = dict(pg_cursor.fetchall())
+            # If we got byte strings, convert them into regular strings
+            if isinstance(next(iter(pg_column_types)), bytes):
+                pg_column_types = {k.decode('utf-8'): v.decode('utf-8') for k, v in pg_column_types.items()}
             pg_cursor.connection.commit()
         except psycopg.Error:
             pg_cursor.connection.rollback()
